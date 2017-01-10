@@ -3,16 +3,16 @@
 
 #include "stdafx.h"
 #include "windows.h"
-#include <fstream>  
-#include <string>  
+#include <fstream>
+#include <string>
 #include <iostream>
-#include <unordered_map> 
+#include <unordered_map>
 #include <locale.h>
 #include <direct.h>
 
-using namespace std;  
+using namespace std;
 
-#define MAX_RET_NUM 4096      // max number of result to be returned 
+#define MAX_RET_NUM 4096      // max number of result to be returned
 #define MAX_CI_NUM 10240
 #define MAX_CORPUS_COUNT 2048
 #define MAX_ZI_NUM_IN_A_CI 5
@@ -94,7 +94,7 @@ IdxNode* g_ftrForwardIdx = NULL;
 
 int Compare( const void *arg1, const void *arg2 )
 {
-    CiFrequency *pContent1 = (CiFrequency *)arg1;  
+    CiFrequency *pContent1 = (CiFrequency *)arg1;
     CiFrequency *pContent2 = (CiFrequency *)arg2;
 
 	int nRet = wcscmp(pContent1->ci, pContent2->ci);
@@ -105,7 +105,7 @@ int Compare( const void *arg1, const void *arg2 )
 
 int IdxBackCompare( const void *arg1, const void *arg2 )
 {
-    IdxNode *pContent1 = (IdxNode *)arg1;  
+    IdxNode *pContent1 = (IdxNode *)arg1;
     IdxNode *pContent2 = (IdxNode *)arg2;
 
 	int nRet = wcsncmp(&g_pBuffer[pContent1->POS + pContent1->LHD], &g_pBuffer[pContent2->POS + pContent2->LHD], CMP_MAXLEN);
@@ -114,7 +114,7 @@ int IdxBackCompare( const void *arg1, const void *arg2 )
 
 int IdxForwardCompare( const void *arg1, const void *arg2 )
 {
-    IdxNode *pContent1 = (IdxNode *)arg1;  
+    IdxNode *pContent1 = (IdxNode *)arg1;
     IdxNode *pContent2 = (IdxNode *)arg2;
 
 	__int64 nStartPos1 = pContent1->POS - pContent1->LHD;
@@ -164,7 +164,7 @@ bool ReadDict(CiFrequency *& pnCF, wchar_t* fnDict){
 	char* psDictBuff = new char[nSize];
 	fread(psDictBuff, sizeof(char), nSize, fpDict);
 	fclose(fpDict);
-	
+
 	for(__int64 i=0;i<nSize;i++){
 		int nLen=1;
 		if( (psDictBuff[i] == '\r')&&(psDictBuff[i+1] == '\n') ){
@@ -223,7 +223,7 @@ void WriteDataNew(char* psBuff,__int64 nSize,FILE* fpSegOut,FILE* fpTextOut,__in
 	CiFrequency * searchResCiFq = NULL;
 
 	int CurCiLength = 0, nLen=1;
-	
+
 	for(__int64 i=0;i<nSize;i++){
 		if (IsIn(psBuff[i])){
 			continue;
@@ -267,7 +267,7 @@ void WriteDataNew(char* psBuff,__int64 nSize,FILE* fpSegOut,FILE* fpTextOut,__in
 			}
 		}
 	}
-	
+
 	if (curCiFq.ci != NULL){delete[] curCiFq.ci;  curCiFq.ci = NULL;}
 	if (searchResCiFq != NULL){searchResCiFq = NULL;}
 }
@@ -288,7 +288,7 @@ void WriteData(char* psBuff,__int64 nSize,FILE* fpOut,__int64& nCiNum,CiFrequenc
 		if(psBuff[i] == 0x20){
 			curCiFq.ci[CurCiLength] = '\0';
 			CurCiLength++;
-			
+
 			if(findCiPtrByUnicode(pnWC, &curCiFq, searchResCiFq)){
 				searchResCiFq->cp++;
 			}else{
@@ -334,12 +334,12 @@ bool MergeFilesUnicode(wchar_t* psFiles[],int nFileNum,char* psSegData, char* ps
 	fpSegOut = fopen(psSegData,"wb");
 	if( fpSegOut == NULL )
 		return false;
-	
+
 	FILE* fpTextgOut = NULL;
 	fpTextgOut = fopen(psTextData,"wb");
 	if( fpTextgOut == NULL )
 		return false;
-	
+
 	printf("\n");
 	for(int i=0;i<nFileNum;i++){
 		FILE* fpInp = NULL;
@@ -360,7 +360,7 @@ bool MergeFilesUnicode(wchar_t* psFiles[],int nFileNum,char* psSegData, char* ps
 		nTotalCiNum += nCiNum;
 
 		delete[] psBuff;
-	}	
+	}
 	//fwrite(&Word,sizeof(unsigned short),1,fpOut);
 
 	fclose(fpSegOut);
@@ -411,8 +411,8 @@ bool CreateIdxDat(char* psSegFile, char* psTextFile, CiFrequency*& pnWC, IdxNode
 	fpInp = fopen(psSegFile,"rb");
 	if( fpInp == NULL )
 		return false;
-	
-	wchar_t* psBuff=new wchar_t[g_nTotalCharNum+1];		
+
+	wchar_t* psBuff=new wchar_t[g_nTotalCharNum+1];
 	fread(psBuff,sizeof(wchar_t),g_nTotalCharNum, fpInp);
 	fclose(fpInp);
 	psBuff[g_nTotalCharNum] = L'\0';
@@ -468,7 +468,7 @@ bool CreateIdxDat(char* psSegFile, char* psTextFile, CiFrequency*& pnWC, IdxNode
 	fpInp = fopen(psTextFile,"rb");
 	if( fpInp == NULL )
 		return false;
-	psBuff = new wchar_t[g_nTotalTextNum+1];		
+	psBuff = new wchar_t[g_nTotalTextNum+1];
 	fread(psBuff,sizeof(wchar_t),g_nTotalTextNum, fpInp);
 	psBuff[g_nTotalTextNum] = L'\0';
 	fclose(fpInp);
@@ -482,7 +482,7 @@ bool CreateIdxDat(char* psSegFile, char* psTextFile, CiFrequency*& pnWC, IdxNode
 	}
 
 	RecoveryCi(pnWC);
-	
+
 	if (curCiFq.ci != NULL){delete curCiFq.ci;}
 
 	if (searchResCiFq != NULL){searchResCiFq = NULL;}
@@ -499,7 +499,7 @@ bool WriteCi2Idx(char* psWC,CiFrequency* pnWC)
 	fwrite(&g_nCiCount, sizeof(__int64), 1, fpOut);
 	fwrite(&g_nTotalCharNum, sizeof(__int64), 1, fpOut);
 	fwrite(&g_nTotalTextNum, sizeof(__int64), 1, fpOut);
-	
+
 	__int64 curStartPos = 0;
 	for (__int64 i = 0; i < g_nCiCount; i++)
 	{
@@ -542,10 +542,10 @@ bool CreateIdx(wchar_t* psDict, wchar_t* psFiles[],int nFileNum,char* psSegData,
 {
 	struct CiFrequency * pnWC = NULL;
 	struct IdxNode * pnCPos = NULL;
-	
+
 	__int64 nTotalCharNum = 0;
 	__int64 nTotalCiNum;
-	
+
 	pnWC = new CiFrequency[MAX_CI_NUM];
 
 	if ( !ReadDict(pnWC, psDict)  ){
@@ -600,7 +600,7 @@ bool FTRLHInit(char* psWC,char* psDat,char* psBackIdx, char* psForwardIdx)
 	FILE* fpInp=fopen(psWC,"rb");
 	if( fpInp == NULL )
 		goto GOTO_ERROR;
-	
+
 	fread(&g_nCiCount, sizeof(__int64), 1, fpInp);
 	fread(&g_nTotalCharNum, sizeof(__int64), 1, fpInp);
 	fread(&g_nTotalTextNum, sizeof(__int64), 1, fpInp);
@@ -720,25 +720,25 @@ __int64 bBackLHSearchLow(__int64 nStart, __int64 nEnd , wchar_t *psQuery)
 
 	if ( nLen > CMP_MAXLEN )
 		nLen = CMP_MAXLEN;
-	
+
 	wcsncpy_s(cmpCi, &g_ftrDat[g_ftrBackIdx[nStart].POS + g_ftrBackIdx[nStart].LHD], nLen);
 
 	CompRes = wcsncmp(cmpCi, psQuery, nLen);
 
 	if( CompRes == 0 )
 		return nStart;
-	
-	if( nEnd - nStart == 1) 
-        return -1;   
-	
+
+	if( nEnd - nStart == 1)
+        return -1;
+
 	if( CompRes > 0 )
-        return -1;   
-	
+        return -1;
+
 	mid = __int64((nStart + nEnd)/2);
-	
-	Ret = bBackLHSearchLow( nStart , mid , psQuery);  
-	if (Ret == -1 )  
-		return bBackLHSearchLow( mid, nEnd , psQuery); 
+
+	Ret = bBackLHSearchLow( nStart , mid , psQuery);
+	if (Ret == -1 )
+		return bBackLHSearchLow( mid, nEnd , psQuery);
 	return Ret;
 }
 
@@ -750,9 +750,9 @@ __int64 bBackLHSearchHigh(__int64 nStart, __int64 nEnd ,wchar_t *psQuery)
 
 	wchar_t cmpCi[CMP_MAXLEN + 1];
 
-	if( nStart >= nEnd ) 
+	if( nStart >= nEnd )
         return -1;
-	
+
 	int nLen = wcslen((const wchar_t *)psQuery);
 
 	if ( nLen > CMP_MAXLEN )
@@ -762,19 +762,19 @@ __int64 bBackLHSearchHigh(__int64 nStart, __int64 nEnd ,wchar_t *psQuery)
 
 	CompRes = wcsncmp(cmpCi, psQuery, nLen);
 
-	if( CompRes == 0 )  
-		return nEnd;  
+	if( CompRes == 0 )
+		return nEnd;
 
 	if( nEnd - nStart == 1 )
-        return -1;   
+        return -1;
 
-	if( CompRes < 0 ) 
-        return -1;   
+	if( CompRes < 0 )
+        return -1;
 
-	mid = __int64(( nStart + nEnd)/2);      
-	Ret = bBackLHSearchHigh( mid , nEnd , psQuery);  
+	mid = __int64(( nStart + nEnd)/2);
+	Ret = bBackLHSearchHigh( mid , nEnd , psQuery);
 	if ( Ret == -1 )
-		return bBackLHSearchHigh( nStart, mid , psQuery); 
+		return bBackLHSearchHigh( nStart, mid , psQuery);
 	return Ret;
 }
 
@@ -793,7 +793,7 @@ __int64 bForwardLHSearchLow(__int64 nStart, __int64 nEnd , wchar_t *psQuery)
 
 	if ( nLen > CMP_MAXLEN )
 		nLen = CMP_MAXLEN;
-	
+
 	for (__int64 j = 0, i = g_ftrForwardIdx[nStart].POS - g_ftrForwardIdx[nStart].LHD; i > g_ftrForwardIdx[nStart].POS - g_ftrForwardIdx[nStart].LHD - nLen; i--,j++){
 		cmpCi[j] = g_ftrDat[i];
 	}
@@ -804,18 +804,18 @@ __int64 bForwardLHSearchLow(__int64 nStart, __int64 nEnd , wchar_t *psQuery)
 
 	if( CompRes == 0 )
 		return nStart;
-	
-	if( nEnd - nStart == 1) 
-        return -1;   
-	
+
+	if( nEnd - nStart == 1)
+        return -1;
+
 	if( CompRes > 0 )
-        return -1;   
-	
+        return -1;
+
 	mid = __int64((nStart + nEnd)/2);
-	
-	Ret = bForwardLHSearchLow( nStart , mid , psQuery);  
-	if (Ret == -1 )  
-		return bForwardLHSearchLow( mid, nEnd , psQuery); 
+
+	Ret = bForwardLHSearchLow( nStart , mid , psQuery);
+	if (Ret == -1 )
+		return bForwardLHSearchLow( mid, nEnd , psQuery);
 	return Ret;
 }
 
@@ -826,8 +826,8 @@ __int64 bForwardLHSearchHigh(__int64 nStart, __int64 nEnd ,wchar_t *psQuery)
 	__int64 mid = 0, Ret= 0;
 
 	wchar_t cmpCi[CMP_MAXLEN + 1];
-	if( nStart >= nEnd ) 
-        return -1;   
+	if( nStart >= nEnd )
+        return -1;
 
 	int nLen = wcslen((const wchar_t *)psQuery);
 
@@ -842,32 +842,32 @@ __int64 bForwardLHSearchHigh(__int64 nStart, __int64 nEnd ,wchar_t *psQuery)
 	CompRes = wcsncmp(cmpCi, psQuery, nLen);
 	//CompRes = wcsncmp(&g_ftrDat[g_ftrForwardIdx[nEnd-1].POS - g_ftrForwardIdx[nEnd-1].LHD], psQuery, 1);
 
-	if( CompRes == 0 )  
-		return nEnd;  
+	if( CompRes == 0 )
+		return nEnd;
 
 	if( nEnd - nStart == 1 )
-        return -1;   
+        return -1;
 
-	if( CompRes < 0 ) 
-        return -1;   
+	if( CompRes < 0 )
+        return -1;
 
-	mid = __int64(( nStart + nEnd)/2);      
-	Ret = bForwardLHSearchHigh( mid , nEnd , psQuery);  
-	if ( Ret == -1 )  
-		return bForwardLHSearchHigh( nStart, mid , psQuery); 
+	mid = __int64(( nStart + nEnd)/2);
+	Ret = bForwardLHSearchHigh( mid , nEnd , psQuery);
+	if ( Ret == -1 )
+		return bForwardLHSearchHigh( nStart, mid , psQuery);
 	return Ret;
 }
 
 bool SearchBackLHFTR(int psInp1Len, wchar_t* psInp2, __int64 nCi2IdxStart, __int64 nCi2IdxEnd, __int64 & nRetStart, __int64 & nRetEnd, __int64 & Num, int nMaxRetLen = -1){
 	int nLen = wcslen(psInp2);
 
-	nRetStart = bBackLHSearchLow(nCi2IdxStart, nCi2IdxEnd, psInp2);	
+	nRetStart = bBackLHSearchLow(nCi2IdxStart, nCi2IdxEnd, psInp2);
 	if ( nRetStart == -1 ){
 		Num=0;
 		return false;
 	}
 
-	nRetEnd = bBackLHSearchHigh(nCi2IdxStart, nCi2IdxEnd, psInp2);	
+	nRetEnd = bBackLHSearchHigh(nCi2IdxStart, nCi2IdxEnd, psInp2);
 
 	Num = nRetEnd - nRetStart;
 	if (( Num > nMaxRetLen) && (nMaxRetLen != -1)){
@@ -884,13 +884,13 @@ bool SearchForwardLHFTR(int psInp1Len, wchar_t* psInp2, __int64 nCi2IdxStart, __
 	}
 	psInp2Reverse[nLen] = '\0';
 
-	nRetStart=bForwardLHSearchLow(nCi2IdxStart, nCi2IdxEnd, psInp2Reverse);	
+	nRetStart=bForwardLHSearchLow(nCi2IdxStart, nCi2IdxEnd, psInp2Reverse);
 	if ( nRetStart == -1 ){
 		Num=0;
 		return false;
 	}
 
-	nRetEnd=bForwardLHSearchHigh(nCi2IdxStart, nCi2IdxEnd, psInp2Reverse);	
+	nRetEnd=bForwardLHSearchHigh(nCi2IdxStart, nCi2IdxEnd, psInp2Reverse);
 
 	Num = nRetEnd - nRetStart;
 	if (( Num > nMaxRetLen) && (nMaxRetLen != -1)){
@@ -1021,7 +1021,7 @@ void InpParser(wchar_t * Inp, int & FtrArgsNum, wchar_t *& KeyWord, wchar_t *& F
 		return;
 		break;
 	}
-	
+
 	if (new_ci != NULL){delete new_ci;}
 	return;
 }
@@ -1036,7 +1036,7 @@ bool FtrLHBF(wchar_t * strKW, wchar_t * strInpBack, wchar_t * strInpForward, int
 	unordered_map<__int64, int> * hashMapJuId = NULL;				//JuID => BackLHD
 	hashMapJuId = new unordered_map<__int64, int>[MaxFileCount];
 
-	
+
 	if(!FTRLH(strKW, strInpBack, psRet, -1, BackNum, nBackStart, nBackEnd, FTRTYPE_BACK)){
 		return false;
 	}
@@ -1050,13 +1050,13 @@ bool FtrLHBF(wchar_t * strKW, wchar_t * strInpBack, wchar_t * strInpForward, int
 	for (__int64 i = nBackStart; i < nBackEnd; i++){
 		hashMapJuId[g_ftrBackIdx[i].DID].insert(unordered_map<__int64, int>::value_type(g_ftrBackIdx[i].JuID, g_ftrBackIdx[i].LHD));
 	}
-	
+
 	if(!FTRLH(strKW, strInpForward, psRet, -1, ForwardNum, nForwardStart, nForwardEnd, FTRTYPE_FORWARD)){
 		return false;
 	}
-	
+
 	if(nForwardEnd == -1){	nForwardEnd = nForwardStart + 1; }
-	
+
 	for (__int64 i = nForwardStart; i < nForwardEnd; i++){
 		try {
 			nBackLHDInHash = hashMapJuId[g_ftrForwardIdx[i].DID].at(g_ftrForwardIdx[i].JuID);
@@ -1064,18 +1064,18 @@ bool FtrLHBF(wchar_t * strKW, wchar_t * strInpBack, wchar_t * strInpForward, int
 				nAllResCount++;
 				continue;
 			}
-			res[nRetCount].nBackLHD = nBackLHDInHash;				
+			res[nRetCount].nBackLHD = nBackLHDInHash;
 			res[nRetCount].nForwardLHD = g_ftrForwardIdx[i].LHD;
 			res[nRetCount].nJuID = g_ftrForwardIdx[i].JuID;
 			res[nRetCount].nPos = g_ftrForwardIdx[i].POS;
 			nRetCount++;nAllResCount++;
 		}
-		catch ( exception &e ) {  
+		catch ( exception &e ) {
 			//If the argument key value is not found, then the function throws an object of class out_of_range.
 			continue;
 		};
 	}
-	
+
 	if (hashMapJuId != NULL){
 		delete[] hashMapJuId;
 	}
@@ -1091,7 +1091,7 @@ void PrintRes(__int64 nStart, __int64 nEnd, int psInp1Len, int psInp2Len, FTRTYP
 
 	for( __int64 i=nStart; i < nEnd; i++){
 		offsetStart = offsetEnd = 10;
-		if (FtrType == FTRTYPE_FORWARD){		
+		if (FtrType == FTRTYPE_FORWARD){
 			do{
 				tEnd = g_ftrForwardIdx[i].POS + offsetStart--;
 			} while (tEnd > g_nTotalCharNum);
@@ -1114,7 +1114,7 @@ void PrintRes(__int64 nStart, __int64 nEnd, int psInp1Len, int psInp2Len, FTRTYP
 			curChar = g_ftrDat[j];
 			//if (curChar != 0x20)
 				printf("%ls", &curChar);
-			
+
 			if (wcscmp(&curChar, L" ")){
 				//printf("%lc", &curChar);
 			}
@@ -1130,7 +1130,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		printf(" argv1: mode:{{1, -createIdx},{2, -search},{3, -searchBatch}} \n argv2: {{mode1 segmented corpus folder}, {mode2 inp}} \n argv3: mode1 dict.txt");
 		return 0;
 	}
-	
+
 	TCHAR curPath[MAX_PATH];
 	if( !GetModuleFileName( NULL, curPath, MAX_PATH ) ){
 		return FALSE;
@@ -1152,10 +1152,10 @@ int _tmain(int argc, _TCHAR* argv[])
 		HANDLE hFind;
 
 		SetCurrentDirectory(curPath);
-		
+
 		int nFileNum = 0;
 		wchar_t* psFiles[MAX_CORPUS_COUNT];
-		
+
 		wchar_t szDir[MAX_PATH];
 		wcscpy(szDir, argv[2]);
 		wcscat(szDir, TEXT("\\*"));
@@ -1178,7 +1178,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					wcscat_s(psFiles[nFileNum], MAX_PATH, L"\\");
 					wcscat_s(psFiles[nFileNum], MAX_PATH, FindFileData.cFileName);
 					nFileNum++;
-				} 
+				}
 			}while(FindNextFile(hFind, &FindFileData) != 0);
 
 			FindClose(hFind);
@@ -1186,14 +1186,14 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		// Check for folder LHIdx existence.
 		TCHAR FolderLHIdx[MAX_PATH];
-		wcscpy_s(FolderLHIdx, MAX_PATH, curPath);  
+		wcscpy_s(FolderLHIdx, MAX_PATH, curPath);
 		wcscat_s(FolderLHIdx, MAX_PATH, L"LHIdx");
-	
+
 		if (FindFirstFile(FolderLHIdx, &FindFileData) == INVALID_HANDLE_VALUE) {
-			if( _wmkdir( FolderLHIdx ) == 0 )  {  
+			if( _wmkdir( FolderLHIdx ) == 0 )  {
 				printf( "Directory '%s' was successfully created\n" , FolderLHIdx);
 			}else{
-				printf( "Problem creating directory '%s'\n" , FolderLHIdx);  
+				printf( "Problem creating directory '%s'\n" , FolderLHIdx);
 				return 0;
 			}
 		}else {
@@ -1218,7 +1218,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			if (psFiles[i] != NULL)
 				delete[] psFiles[i];
 		}
-			
+
 	}else if(wcscmp(argv[1], L"-search") == 0){
 		printf("Reading Idx files...\n");
 
@@ -1318,6 +1318,6 @@ int _tmain(int argc, _TCHAR* argv[])
 		printf(" argv1: mode:{{1, -createIdx},{2, -search},{3, -searchBatch}} \n argv2: {{mode1 segmented corpus folder}, {mode2 inp}} \n argv3: mode1 dict.txt");
 	}
 
-	
+
 	return 0;
 }
