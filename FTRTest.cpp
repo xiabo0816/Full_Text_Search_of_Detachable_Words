@@ -1,4 +1,4 @@
-﻿// FTRTest.cpp : 定义控制台应用程序的入口点。
+// FTRTest.cpp : 定义控制台应用程序的入口点。
 //
 
 #include "stdafx.h"
@@ -9,14 +9,14 @@
 #include <unordered_map>
 #include <locale.h>
 #include <direct.h>
+#include <time.h>
 
 using namespace std;
 
 #define MAX_RET_NUM 4096      // max number of result to be returned
-#define MAX_CI_NUM 10240
+#define MAX_CI_NUM 1001		//长度足够大，或者比已知长度词表多一个
 #define MAX_CORPUS_COUNT 2048
 #define MAX_ZI_NUM_IN_A_CI 5
-#define MAX_FILE_SIZE 4096
 //#define _CRT_SECURE_NO_WARNINGS
 
 struct CiFrequency
@@ -94,19 +94,19 @@ IdxNode* g_ftrForwardIdx = NULL;
 
 int Compare( const void *arg1, const void *arg2 )
 {
-    CiFrequency *pContent1 = (CiFrequency *)arg1;
-    CiFrequency *pContent2 = (CiFrequency *)arg2;
+	CiFrequency *pContent1 = (CiFrequency *)arg1;
+	CiFrequency *pContent2 = (CiFrequency *)arg2;
 
 	int nRet = wcscmp(pContent1->ci, pContent2->ci);
 	//int nRet = wcsncmp(pContent1->ci, pContent2->ci, CMP_MAXLEN);
 
-    return nRet;
+	return nRet;
 }
 
 int IdxBackCompare( const void *arg1, const void *arg2 )
 {
-    IdxNode *pContent1 = (IdxNode *)arg1;
-    IdxNode *pContent2 = (IdxNode *)arg2;
+	IdxNode *pContent1 = (IdxNode *)arg1;
+	IdxNode *pContent2 = (IdxNode *)arg2;
 
 	int nRet = wcsncmp(&g_pBuffer[pContent1->POS + pContent1->LHD], &g_pBuffer[pContent2->POS + pContent2->LHD], CMP_MAXLEN);
 	return nRet;
@@ -114,8 +114,8 @@ int IdxBackCompare( const void *arg1, const void *arg2 )
 
 int IdxForwardCompare( const void *arg1, const void *arg2 )
 {
-    IdxNode *pContent1 = (IdxNode *)arg1;
-    IdxNode *pContent2 = (IdxNode *)arg2;
+	IdxNode *pContent1 = (IdxNode *)arg1;
+	IdxNode *pContent2 = (IdxNode *)arg2;
 
 	__int64 nStartPos1 = pContent1->POS - pContent1->LHD;
 	__int64 nStartPos2 = pContent2->POS - pContent2->LHD;
@@ -142,8 +142,8 @@ int IdxForwardCompare( const void *arg1, const void *arg2 )
 
 int FTRCompare(const void *arg1, const void *arg2 )
 {
-    Ci2IdxNode *pContent1 = (Ci2IdxNode *)arg1;
-    Ci2IdxNode *pContent2 = (Ci2IdxNode *)arg2;
+	Ci2IdxNode *pContent1 = (Ci2IdxNode *)arg1;
+	Ci2IdxNode *pContent2 = (Ci2IdxNode *)arg2;
 
 	int nRet = wcscmp(pContent1->ci, pContent2->ci);
 	return nRet;
@@ -167,6 +167,9 @@ bool ReadDict(CiFrequency *& pnCF, wchar_t* fnDict){
 
 	for(__int64 i=0;i<nSize;i++){
 		int nLen=1;
+		if((psDictBuff[i] >= '0')&&(psDictBuff[i] <= '9')||(psDictBuff[i] == '\t')){
+			continue;
+		}
 		if( (psDictBuff[i] == '\r')&&(psDictBuff[i+1] == '\n') ){
 			tempCi[tempCiLength] = L'\0';
 
@@ -223,8 +226,10 @@ void WriteDataNew(char* psBuff,__int64 nSize,FILE* fpSegOut,FILE* fpTextOut,__in
 	CiFrequency * searchResCiFq = NULL;
 
 	int CurCiLength = 0, nLen=1;
+	printf("\nTotal %d chars.\n", nSize);
 
 	for(__int64 i=0;i<nSize;i++){
+		printf("\r%d-th char is processing...", i);
 		if (IsIn(psBuff[i])){
 			continue;
 		}else{
@@ -250,19 +255,23 @@ void WriteDataNew(char* psBuff,__int64 nSize,FILE* fpSegOut,FILE* fpTextOut,__in
 			i--;
 			if (CurCiLength){
 				curCiFq.ci[CurCiLength] = '\0';
-				nCiNum++;
+				//printf("\r%d-th Ci is processing...", g_nCiCount);
 				fwrite(L" ", sizeof(unsigned short), 1, fpSegOut);
 				g_nTotalCharNum++;
 
 				if(findCiPtrByUnicode(pnWC, &curCiFq, searchResCiFq)){
+					//判断语料库中的每个词是否在词表里
+					nCiNum++;
 					searchResCiFq->cp++;
 				}else{
+					/*if (g_nCiCount < MAX_CI_NUM){
 					pnWC[g_nCiCount].ci = new wchar_t[CurCiLength + 1];
 					pnWC[g_nCiCount].cp++;
 					wcscpy_s(pnWC[g_nCiCount].ci, CurCiLength + 1, (const wchar_t *)curCiFq.ci);
 					g_nCiCount++;
 
 					qsort(pnWC, g_nCiCount, sizeof(CiFrequency), Compare);
+					}*/
 				}
 			}
 		}
@@ -292,12 +301,13 @@ void WriteData(char* psBuff,__int64 nSize,FILE* fpOut,__int64& nCiNum,CiFrequenc
 			if(findCiPtrByUnicode(pnWC, &curCiFq, searchResCiFq)){
 				searchResCiFq->cp++;
 			}else{
+				/*
 				pnWC[g_nCiCount].ci = new wchar_t[CurCiLength + 1];
 				pnWC[g_nCiCount].cp++;
 				wcscpy_s(pnWC[g_nCiCount].ci, CurCiLength + 1, (const wchar_t *)curCiFq.ci);
 				g_nCiCount++;
-
 				qsort(pnWC, g_nCiCount, sizeof(CiFrequency), Compare);
+				*/
 			}
 
 			CurCiLength = 0;
@@ -343,7 +353,7 @@ bool MergeFilesUnicode(wchar_t* psFiles[],int nFileNum,char* psSegData, char* ps
 	printf("\n");
 	for(int i=0;i<nFileNum;i++){
 		FILE* fpInp = NULL;
-		printf("\r%d-th file is processing...", i);
+		printf("\r%d-th file is processing.........", i);
 		fpInp=_wfopen(psFiles[i], L"rb");
 		if( fpInp == NULL )
 			continue;
@@ -389,16 +399,15 @@ void SortLHBlock(int nStart,int nEnd,IdxNode* pnPOS,wchar_t* psBuff, int (*compa
 {
 	nStart++; nEnd++;
 	g_pBuffer=psBuff;
-	if ( nEnd-nStart > 1 ){
-		int i=0;
-	}
 	qsort(&pnPOS[nStart],nEnd-nStart,sizeof(IdxNode),compare);
 }
 
 void SortLHIdx(CiFrequency* pnWC, IdxNode* pnPOS, wchar_t* psBuff, int (*compare)(const void *, const void *) )
 {
 	for(__int64 i=0;i < g_nCiCount - 1;i++){
-		SortLHBlock(pnWC[i].cp,pnWC[i+1].cp, pnPOS, psBuff, compare);
+		if(pnWC[i].cp != pnWC[i+1].cp){
+			SortLHBlock(pnWC[i].cp,pnWC[i+1].cp, pnPOS, psBuff, compare);
+		}
 	}
 }
 
@@ -552,7 +561,7 @@ bool CreateIdx(wchar_t* psDict, wchar_t* psFiles[],int nFileNum,char* psSegData,
 		return false;
 	}
 
- 	if ( !MergeFilesUnicode(psFiles, nFileNum, psSegData, psTextData, pnWC, nTotalCiNum)  ){
+	if ( !MergeFilesUnicode(psFiles, nFileNum, psSegData, psTextData, pnWC, nTotalCiNum)  ){
 		return false;
 	}
 
@@ -714,7 +723,7 @@ __int64 bBackLHSearchLow(__int64 nStart, __int64 nEnd , wchar_t *psQuery)
 
 	wchar_t cmpCi[CMP_MAXLEN + 1];
 	if( nStart >= nEnd )
-        return -1;
+		return -1;
 
 	int nLen = wcslen((const wchar_t *)psQuery);
 
@@ -729,10 +738,10 @@ __int64 bBackLHSearchLow(__int64 nStart, __int64 nEnd , wchar_t *psQuery)
 		return nStart;
 
 	if( nEnd - nStart == 1)
-        return -1;
+		return -1;
 
 	if( CompRes > 0 )
-        return -1;
+		return -1;
 
 	mid = __int64((nStart + nEnd)/2);
 
@@ -751,7 +760,7 @@ __int64 bBackLHSearchHigh(__int64 nStart, __int64 nEnd ,wchar_t *psQuery)
 	wchar_t cmpCi[CMP_MAXLEN + 1];
 
 	if( nStart >= nEnd )
-        return -1;
+		return -1;
 
 	int nLen = wcslen((const wchar_t *)psQuery);
 
@@ -766,10 +775,10 @@ __int64 bBackLHSearchHigh(__int64 nStart, __int64 nEnd ,wchar_t *psQuery)
 		return nEnd;
 
 	if( nEnd - nStart == 1 )
-        return -1;
+		return -1;
 
 	if( CompRes < 0 )
-        return -1;
+		return -1;
 
 	mid = __int64(( nStart + nEnd)/2);
 	Ret = bBackLHSearchHigh( mid , nEnd , psQuery);
@@ -787,7 +796,7 @@ __int64 bForwardLHSearchLow(__int64 nStart, __int64 nEnd , wchar_t *psQuery)
 	wchar_t cmpCi[CMP_MAXLEN + 1];
 
 	if( nStart >= nEnd )
-        return -1;
+		return -1;
 
 	int nLen = wcslen((const wchar_t *)psQuery);
 
@@ -806,10 +815,10 @@ __int64 bForwardLHSearchLow(__int64 nStart, __int64 nEnd , wchar_t *psQuery)
 		return nStart;
 
 	if( nEnd - nStart == 1)
-        return -1;
+		return -1;
 
 	if( CompRes > 0 )
-        return -1;
+		return -1;
 
 	mid = __int64((nStart + nEnd)/2);
 
@@ -827,7 +836,7 @@ __int64 bForwardLHSearchHigh(__int64 nStart, __int64 nEnd ,wchar_t *psQuery)
 
 	wchar_t cmpCi[CMP_MAXLEN + 1];
 	if( nStart >= nEnd )
-        return -1;
+		return -1;
 
 	int nLen = wcslen((const wchar_t *)psQuery);
 
@@ -846,10 +855,10 @@ __int64 bForwardLHSearchHigh(__int64 nStart, __int64 nEnd ,wchar_t *psQuery)
 		return nEnd;
 
 	if( nEnd - nStart == 1 )
-        return -1;
+		return -1;
 
 	if( CompRes < 0 )
-        return -1;
+		return -1;
 
 	mid = __int64(( nStart + nEnd)/2);
 	Ret = bForwardLHSearchHigh( mid , nEnd , psQuery);
@@ -873,7 +882,7 @@ bool SearchBackLHFTR(int psInp1Len, wchar_t* psInp2, __int64 nCi2IdxStart, __int
 	if (( Num > nMaxRetLen) && (nMaxRetLen != -1)){
 		Num=nMaxRetLen;
 	}
- 	return true;
+	return true;
 }
 bool SearchForwardLHFTR(int psInp1Len, wchar_t* psInp2, __int64 nCi2IdxStart, __int64 nCi2IdxEnd, __int64 & nRetStart, __int64 & nRetEnd, __int64 & Num, int nMaxRetLen = -1){
 	int nLen = wcslen(psInp2);
@@ -898,7 +907,7 @@ bool SearchForwardLHFTR(int psInp1Len, wchar_t* psInp2, __int64 nCi2IdxStart, __
 	}
 	return true;
 }
-bool FTRLH(wchar_t* psInp1,wchar_t* psInp2,char** psRet,int nMaxRetLen,__int64 & Num, __int64 & nRetStart, __int64 & nRetEnd, FTRTYPE FtrType)
+bool FTRLHCore(wchar_t* psInp1,wchar_t* psInp2,char** psRet,int nMaxRetLen,__int64 & Num, __int64 & nRetStart, __int64 & nRetEnd, FTRTYPE FtrType)
 {
 	/*
 	nRetStart: Start position of search result in Idx
@@ -1037,7 +1046,7 @@ bool FtrLHBF(wchar_t * strKW, wchar_t * strInpBack, wchar_t * strInpForward, int
 	hashMapJuId = new unordered_map<__int64, int>[MaxFileCount];
 
 
-	if(!FTRLH(strKW, strInpBack, psRet, -1, BackNum, nBackStart, nBackEnd, FTRTYPE_BACK)){
+	if(!FTRLHCore(strKW, strInpBack, psRet, -1, BackNum, nBackStart, nBackEnd, FTRTYPE_BACK)){
 		return false;
 	}
 
@@ -1051,7 +1060,7 @@ bool FtrLHBF(wchar_t * strKW, wchar_t * strInpBack, wchar_t * strInpForward, int
 		hashMapJuId[g_ftrBackIdx[i].DID].insert(unordered_map<__int64, int>::value_type(g_ftrBackIdx[i].JuID, g_ftrBackIdx[i].LHD));
 	}
 
-	if(!FTRLH(strKW, strInpForward, psRet, -1, ForwardNum, nForwardStart, nForwardEnd, FTRTYPE_FORWARD)){
+	if(!FTRLHCore(strKW, strInpForward, psRet, -1, ForwardNum, nForwardStart, nForwardEnd, FTRTYPE_FORWARD)){
 		return false;
 	}
 
@@ -1113,7 +1122,7 @@ void PrintRes(__int64 nStart, __int64 nEnd, int psInp1Len, int psInp2Len, FTRTYP
 		{
 			curChar = g_ftrDat[j];
 			//if (curChar != 0x20)
-				printf("%ls", &curChar);
+			printf("%ls", &curChar);
 
 			if (wcscmp(&curChar, L" ")){
 				//printf("%lc", &curChar);
@@ -1122,6 +1131,85 @@ void PrintRes(__int64 nStart, __int64 nEnd, int psInp1Len, int psInp2Len, FTRTYP
 		printf("\n");
 	}
 	return;
+}
+
+bool FTRLH(_TCHAR* argv, int &FtrArgsNum, char* &psInp, char** &psRet, int &nMaxRetLen, __int64 &Num, int &BFRetCount, int &BFAllResCount, __int64 & nRetStart, __int64 & nRetEnd){
+	wchar_t *KeyWord=NULL;
+	wchar_t *FtrBackArgs = NULL;
+	wchar_t *FtrForwardArgs = NULL;
+
+	int printStartPos = 0, printEndPos = 0, printOFFSET = 10;
+	BFLhd * BFLhdRes = NULL;
+
+	InpParser(argv, FtrArgsNum, KeyWord, FtrBackArgs, FtrForwardArgs);
+	setlocale(LC_ALL, "");
+	printf("Now start search...Keyword: %ls\n", KeyWord);
+	switch (FtrArgsNum)
+	{
+	case 4:
+		FTRLHCore(KeyWord, L"", psRet, nMaxRetLen, Num, nRetStart, nRetEnd, FTRTYPE_BACK);
+		if (Num != 0){
+			PrintRes(nRetStart, nRetEnd, wcslen(KeyWord), 0, FTRTYPE_BACK);
+		}else
+			printf("0 Result return");
+		//only ftr no LH;
+		break;
+	case 3:
+		BFLhdRes = new BFLhd[nMaxRetLen];
+		FtrLHBF(KeyWord, FtrBackArgs, FtrForwardArgs, nMaxRetLen, BFAllResCount, BFRetCount, BFLhdRes);
+		if(BFRetCount){
+			//Prompt content:
+			printf("Search result:\n");
+
+			setlocale(LC_ALL, "");
+			for (int i = 0; i < BFRetCount; i++){
+				printOFFSET = 10;
+				do{
+					printStartPos = BFLhdRes[i].nPos - BFLhdRes[i].nForwardLHD - printOFFSET--;
+				} while (printStartPos<0);
+				printOFFSET = 10;
+				do{
+					printEndPos =  BFLhdRes[i].nPos + BFLhdRes[i].nBackLHD + wcslen(FtrBackArgs) + printOFFSET--;
+				} while (printEndPos>g_nTotalCharNum);
+
+				for (int j =printStartPos; j < printEndPos; j++){
+					wchar_t t = g_ftrDat[j];
+					printf("%ls", &t);
+				}
+				printf("\n");
+			}
+		}else{
+			printf("0 Result return");
+		}
+		if( BFLhdRes != NULL){
+			delete[] BFLhdRes;
+		}
+		//back & forward;
+		break;
+	case 2:
+		FTRLHCore(KeyWord, FtrForwardArgs, psRet, nMaxRetLen, Num, nRetStart, nRetEnd, FTRTYPE_FORWARD);
+		if (Num != 0)
+			PrintRes(nRetStart, nRetEnd, wcslen(KeyWord), wcslen(FtrForwardArgs), FTRTYPE_FORWARD);
+		else
+			printf("0 Result return");
+		//only forward;
+		break;
+	case 1:
+		FTRLHCore(KeyWord, FtrBackArgs, psRet, nMaxRetLen, Num, nRetStart, nRetEnd, FTRTYPE_BACK);
+		if (Num != 0)
+			PrintRes(nRetStart, nRetEnd, wcslen(KeyWord), wcslen(FtrBackArgs), FTRTYPE_BACK);
+		else
+			printf("0 Result return");
+		//only back;
+		break;
+	case 0:
+		printf("Error retrieval string.\n");
+		//error
+		break;
+	default:
+		break;
+	}
+	return true;
 }
 
 int _tmain(int argc, _TCHAR* argv[])
@@ -1189,17 +1277,22 @@ int _tmain(int argc, _TCHAR* argv[])
 		wcscpy_s(FolderLHIdx, MAX_PATH, curPath);
 		wcscat_s(FolderLHIdx, MAX_PATH, L"LHIdx");
 
-		if (FindFirstFile(FolderLHIdx, &FindFileData) == INVALID_HANDLE_VALUE) {
-			if( _wmkdir( FolderLHIdx ) == 0 )  {
-				printf( "Directory '%s' was successfully created\n" , FolderLHIdx);
-			}else{
-				printf( "Problem creating directory '%s'\n" , FolderLHIdx);
-				return 0;
+		try{
+			if (FindFirstFile(FolderLHIdx, &FindFileData) == INVALID_HANDLE_VALUE) {
+				if( _wmkdir( FolderLHIdx ) == 0 )  {
+					printf( "Directory '%s' was successfully created\n" , FolderLHIdx);
+				}else{
+					printf( "Problem creating directory '%s'\n" , FolderLHIdx);
+					return 0;
+				}
+			}else {
+				_tprintf (TEXT("Folder already exist: %s\n"), FindFileData.cFileName);
+				FindClose(hFind);
 			}
-		}else {
-			_tprintf (TEXT("Folder already exist: %s\n"), FindFileData.cFileName);
-			FindClose(hFind);
+		}catch(exception e){
+			printf("%s", e);
 		}
+
 
 		printf("Starting create Idx...\n");
 
@@ -1235,89 +1328,66 @@ int _tmain(int argc, _TCHAR* argv[])
 		wchar_t *KeyWord=NULL;
 		wchar_t *FtrBackArgs = NULL;
 		wchar_t *FtrForwardArgs = NULL;
-
-		InpParser(argv[2], FtrArgsNum, KeyWord, FtrBackArgs, FtrForwardArgs);
 		__int64 nRetStart = 0, nRetEnd = 0;
 		int printStartPos = 0, printEndPos = 0, printOFFSET = 10;
 		BFLhd * BFLhdRes = NULL;
-		setlocale(LC_ALL, "");
-		printf("Now start search...Keyword: %ls\n", KeyWord);
-		switch (FtrArgsNum)
-		{
-		case 4:
-			FTRLH(KeyWord, L"", psRet, nMaxRetLen, Num, nRetStart, nRetEnd, FTRTYPE_BACK);
-			if (Num != 0){
-				PrintRes(nRetStart, nRetEnd, wcslen(KeyWord), 0, FTRTYPE_BACK);
-			}else
-				printf("0 Result return");
-			//only ftr no LH;
-			break;
-		case 3:
-			BFLhdRes = new BFLhd[nMaxRetLen];
-			FtrLHBF(KeyWord, FtrBackArgs, FtrForwardArgs, nMaxRetLen, BFAllResCount, BFRetCount, BFLhdRes);
-			if(BFRetCount){
-				//Prompt content:
-				printf("Search result:\n");
 
-				setlocale(LC_ALL, "");
-				for (int i = 0; i < BFRetCount; i++){
-					printOFFSET = 10;
-					do{
-						printStartPos = BFLhdRes[i].nPos - BFLhdRes[i].nForwardLHD - printOFFSET--;
-					} while (printStartPos<0);
-					printOFFSET = 10;
-					do{
-						printEndPos =  BFLhdRes[i].nPos + BFLhdRes[i].nBackLHD + wcslen(FtrBackArgs) + printOFFSET--;
-					} while (printEndPos>g_nTotalCharNum);
-
-					for (int j =printStartPos; j < printEndPos; j++){
-						wchar_t t = g_ftrDat[j];
-						printf("%ls", &t);
-					}
-					printf("\n");
-				}
-			}else{
-				printf("0 Result return");
-			}
-			if( BFLhdRes != NULL){
-				delete[] BFLhdRes;
-			}
-			//back & forward;
-			break;
-		case 2:
-			FTRLH(KeyWord, FtrForwardArgs, psRet, nMaxRetLen, Num, nRetStart, nRetEnd, FTRTYPE_FORWARD);
-			if (Num != 0)
-				PrintRes(nRetStart, nRetEnd, wcslen(KeyWord), wcslen(FtrForwardArgs), FTRTYPE_FORWARD);
-			else
-				printf("0 Result return");
-			//only forward;
-			break;
-		case 1:
-			FTRLH(KeyWord, FtrBackArgs, psRet, nMaxRetLen, Num, nRetStart, nRetEnd, FTRTYPE_BACK);
-			if (Num != 0)
-				PrintRes(nRetStart, nRetEnd, wcslen(KeyWord), wcslen(FtrBackArgs), FTRTYPE_BACK);
-			else
-				printf("0 Result return");
-			//only back;
-			break;
-		case 0:
-			printf("Error retrieval string.\n");
-			//error
-			break;
-		default:
-			break;
-		}
+		FTRLH(argv[2], FtrArgsNum, psInp, psRet, nMaxRetLen, Num, BFRetCount, BFAllResCount, nRetStart, nRetEnd);
 
 		FTRLHExit();
 	}else if(wcscmp(argv[1], L"-searchBatch") == 0){
-		printf("Input your retrieval string:(Ex. 城市*和*乡村)\n");
-		//while(wcin){}
-		printf(" argv1: mode:{{1, -createIdx},{2, -search},{3, -searchBatch}} \n argv2: {{mode1 segmented corpus folder}, {mode2 inp}} \n argv3: mode1 dict.txt");
-	}else
-	{
+		printf("Reading Idx files...\n");
+		SetCurrentDirectory(curPath);
+		FTRLHInit(psLHCi, psTextDataOutput, psLHIdxBackOutput, psLHIdxForwardOutput);
+
+		//variable for ftr
+		char* psInp = NULL;
+		char** psRet = new char*[MAX_RET_NUM];;
+		int nMaxRetLen = 10;
+		__int64 Num = 0;
+
+		int FtrArgsNum = 0, BFRetCount = 0, BFAllResCount = 0;
+		wchar_t *KeyWord=NULL;
+		wchar_t *FtrBackArgs = NULL;
+		wchar_t *FtrForwardArgs = NULL;
+		__int64 nRetStart = 0, nRetEnd = 0;
+		int printStartPos = 0, printEndPos = 0, printOFFSET = 10;
+		BFLhd * BFLhdRes = NULL;
+		wchar_t inp[48];
+		int inps_count = 999;
+		time_t ltime;time( &ltime );
+		wchar_t curChar[2];curChar[1] = '\0';
+		setlocale(LC_ALL, "");
+		printf("Start search, time_stamp: %lld", (long long)ltime);
+		while(inps_count>0){
+			try{
+				//srand(unsigned(time(0)));
+				curChar[0] = g_ftrDat[rand()%g_nTotalCharNum];
+				wcscpy_s(inp, curChar);
+				wcscat_s(inp, L"*");
+				wcscat_s(inp, g_ftrCi2Idx[inps_count].ci);
+				wcscat_s(inp, L"*");
+				curChar[0] = g_ftrDat[rand()%g_nTotalCharNum];
+				wcscat_s(inp, curChar);
+				printf("\n%ls\n", inp);
+
+				FTRLH(inp, FtrArgsNum, psInp, psRet, nMaxRetLen, Num, BFRetCount, BFAllResCount, nRetStart, nRetEnd);
+				/*search("词表里的词*语料库的一个字");
+				search("语料库的一个字*词表里的词");
+				search("语料库的一个字*词表里的词*语料库的一个字");*/
+				inps_count -= 3;
+			}catch(exception e){
+				printf("Error: %s", e);
+			}
+		}
+		time( &ltime );
+		printf("\nEnd search, time_stamp: %lld", (long long)ltime);
+		FTRLHExit();
+	}else{
 		printf(" argv1: mode:{{1, -createIdx},{2, -search},{3, -searchBatch}} \n argv2: {{mode1 segmented corpus folder}, {mode2 inp}} \n argv3: mode1 dict.txt");
 	}
-
-
 	return 0;
+
+	//-createIdx corpus3 dict_from_bccc.txt
+	//-search 我*拥有*喜欢
 }
